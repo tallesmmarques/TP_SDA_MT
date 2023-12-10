@@ -1,4 +1,4 @@
-// TP_SDA.cpp : Este arquivo cont�m a fun��o 'main'. A execu��o do programa come�a e termina ali.
+// TP_SDA.cpp : Este arquivo cont�m a função 'main'. A execução do programa começa e termina nela.
 //
 
 #define _CRT_SECURE_NO_WARNINGS /* Para evitar warnings sobre fun�oes seguras de manipulacao de strings*/
@@ -77,9 +77,9 @@ int VazaoItemID;
 
 WSADATA     wsaData;
 SOCKET s;
-SOCKADDR_IN servaddr; //endereco do servidor
+SOCKADDR_IN servaddr;			// Endereco do servidor
 int status = 0;
-int port; //porta de conexao com o servidor
+int port;						// Porta de conexao com o servidor
 char ip[16];
 int nseq_r = 1;
 int nseq_e = 1;
@@ -116,19 +116,19 @@ int CheckSocketError(int status) {
 	if (status == SOCKET_ERROR) {
 		erro = WSAGetLastError();
 		if (erro == WSAEWOULDBLOCK) {
-			printf("Timeout na operacao de RECV! Erro = %d\n", erro);
+			printf("[Err] Timeout na operacao de RECV! Erro = %d\n", erro);
 			return -1;
 		}
 		else if (erro == WSAECONNABORTED) {
-			printf("Conexao abortada pelo cliente TCP! Erro = %d\n", erro);
+			printf("[Err] Conexao abortada pelo cliente TCP! Erro = %d\n", erro);
 			return -1;
 		}
 		else {
-			printf("Erro de conexao! Erro = %d\n", erro);
+			printf("[Err] Erro de conexao! Erro = %d\n", erro);
 			return -2;
 		}
 	} else if (status == 0) {
-		printf("Conexao com cliente TCP encerrada prematuramente! Status = %d\n", status);
+		printf("[Err] Conexao com cliente TCP encerrada prematuramente! Status = %d\n", status);
 		return -1;
 	}
 	else return 0;
@@ -141,8 +141,10 @@ int ServerConnect() {
 
 	while (TRUE) {
 		ret = WaitForSingleObject(hEventESC, tempo);
-			// Cria��o do socket
-			printf("[Log] Criando socket ...\n");
+		// Criação do socket
+		SetConsoleTextAttribute(hOut, WHITE);
+		printf("[Log] Criando socket ...\n");
+
 		if (ret == WAIT_TIMEOUT) { //caso o tempo ate a proxima tentativa se esgote
 			s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 			if (s == INVALID_SOCKET) {
@@ -175,7 +177,8 @@ int ServerConnect() {
 			}
 		}
 		else if (ret == WAIT_OBJECT_0) {
-			printf("Erro na funcao de conexao... Erro: %d\n", GetLastError());
+			SetConsoleTextAttribute(hOut, HLRED);
+			printf("[Err] Erro na funcao de conexao... Erro: %d\n", GetLastError());
 			return 1;
 		}
 	}
@@ -189,7 +192,7 @@ int main(int argc, char** argv)
 
 	/* Verifica parametros de linha de comando */
 	if (argc != 3) {
-		printf("parametros de linha de comando invalidos\n");
+		printf("[Err] Parametros de linha de comando invalidos\n");
 		_exit(0);
 	}
 	else if (argc == 3) {
@@ -197,7 +200,7 @@ int main(int argc, char** argv)
 		strcpy(ip,argv[2]);
 	}
 
-	/* Obt�m um handle para a sa�da da console */
+	/* Obtem um handle para a saida da console */
 	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hOut == INVALID_HANDLE_VALUE) {
 		SetConsoleTextAttribute(hOut, HLRED);
@@ -225,7 +228,7 @@ int main(int argc, char** argv)
 	hEventASyncRead = CreateEvent(NULL, FALSE, FALSE, "EventoASyncRead");
 
 	// ************************
-	// *  CRIA��O DE THREADS  *
+	// *  CRIAÇÃO DE THREADS  *
 	// ************************
 
 	hThreadEnviaMsg = (HANDLE)_beginthreadex(
@@ -261,7 +264,7 @@ int main(int argc, char** argv)
 		if (nTecla == ESC) { //encerramento de programa
 			SetEvent(hEventESC);
 			SetConsoleTextAttribute(hOut, WHITE);
-			printf("Tecla de encerramento do programa ativada...\n");
+			printf("[Log] Tecla de encerramento do programa ativada...\n");
 			break;
 		};
 	}
@@ -282,7 +285,7 @@ int main(int argc, char** argv)
 	WSACleanup();
 
 	SetConsoleTextAttribute(hOut, WHITE);
-	printf("Encerrando o programa ...");
+	printf("[Log] Encerrando o programa ...");
 
 	return EXIT_SUCCESS;
 }
@@ -317,14 +320,14 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 				if ((nseq_e++) != nseq_r) {
 					// Recebeu numero de mensagem estranho
 					SetConsoleTextAttribute(hOut, HLRED);
-					printf("Numero de mensagem invalido... Recebido: %d. Esperado: %d\n", nseq_r, nseq_e);
+					printf("[Err] Numero de mensagem invalido... Recebido: %d. Esperado: %d\n", nseq_r, nseq_e);
 					aborta = 1;
 					break;
 				}
 				if (strncmp(&buf[6], "45", 2) != 0) {
 					// Recebeu codigo de mensagem errado
 					SetConsoleTextAttribute(hOut, HLRED);
-					printf("Codigo de mensagem invalido. Espera-se o codigo 45.\n");
+					printf("[Err] Codigo de mensagem invalido. Espera-se o codigo 45.\n");
 					aborta = 1;
 					break;
 				}
@@ -334,7 +337,7 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 				// Envio do ACK
 				sprintf_s(msgack, "%05d$00", nseq_e++);
 				status = send(s, msgack, TAMMSGACK, 0);
-				if ((acao = CheckSocketError(status, hOut)) != 0) break;
+				if ((acao = CheckSocketError(status)) != 0) break;
 
 				SetConsoleTextAttribute(hOut, YELLOW);
 				printf("Mensagem ACK enviada:\n%s\n\n", msgack);
@@ -370,16 +373,16 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 				if ((acao = CheckSocketError(status)) != 0) break;
 				sscanf_s(buf, "%5d", &nseq_r);
 				if ((nseq_e++) != nseq_r) {
-					//recebeu numero de mensagem errado
+					// Recebeu numero de mensagem errado
 					SetConsoleTextAttribute(hOut, HLRED);
-					printf("Numero de mensagem invalido... Recebido: %d. Esperado: %d\n", nseq_r, nseq_e);
+					printf("[Err] Numero de mensagem invalido... Recebido: %d. Esperado: %d\n", nseq_r, nseq_e);
 					aborta = 1;
 					break;
 				}
 				if (strncmp(&buf[6], "99", 2) != 0) {
 					// Recebeu codigo de mensagem errado
 					SetConsoleTextAttribute(hOut, HLRED);
-					printf("Codigo de mensagem invalido. Espera-se o codigo 99.\n");
+					printf("[Err] Codigo de mensagem invalido. Espera-se o codigo 99.\n");
 					aborta = 1;
 					break;
 				}
@@ -403,7 +406,7 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 			aborta = ServerConnect();
 		} else break;
 	}
-	//encerra programa caso "aborta = 1" pois houve algum erro
+	// Eencerra programa caso "aborta = 1" pois houve algum erro
 	_endthreadex(0);
 	return 0;
 }
