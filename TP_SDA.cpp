@@ -109,6 +109,8 @@ int Vazao = 0;
 DWORD WINAPI ThreadEnviaMsg(LPVOID);
 DWORD WINAPI ThreadOPC(LPVOID);
 
+short int aborta = 0;
+
 /* funcao para erro de conexao */
 int CheckSocketError(int status) {
 	int erro;
@@ -261,7 +263,7 @@ int main(int argc, char** argv)
 	while (TRUE) {
 		nTecla = _getch();
 		if (nTecla == S || nTecla == S + MINUSCULO) SetEvent(hEventS); //evendo da tecla s
-		if (nTecla == ESC) { //encerramento de programa
+		if (nTecla == ESC || aborta == 1) { //encerramento de programa
 			SetEvent(hEventESC);
 			SetConsoleTextAttribute(hOut, WHITE);
 			printf("[Log] Tecla de encerramento do programa ativada...\n");
@@ -299,7 +301,7 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 	int desconto = 0;
 	int atual = 0;
 	HANDLE Events[2] = { hEventS, hEventESC };
-	short int aborta = ServerConnect();
+	aborta = ServerConnect();
 	while (!aborta) {
 		while (TRUE) {
 			atual = GetTickCount64();
@@ -360,7 +362,7 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 			}
 			else if (ret == WAIT_TIMEOUT) {
 				// Mensagem periodica
-				sprintf_s(msgdados, "%05d$55$%07.1f$%06.1f$%05.1f\n", nseq_e++, 
+				sprintf_s(msgdados, "%05d$55$%07.1f$%06.1f$%05.1f", nseq_e++, 
 					fmod(Temperatura, 100000), fmod(Umidade, 10000), fmod(Granulometria, 1000));
 				status = send(s, msgdados, TAMMSGDADOS, 0);
 				if ((acao = CheckSocketError(status)) != 0) break;
@@ -387,7 +389,7 @@ DWORD WINAPI ThreadEnviaMsg(LPVOID id) {
 					break;
 				}
 				SetConsoleTextAttribute(hOut, YELLOW);
-				printf("Mensagem ACK recebida para o CLP do disco de pelotamento:\n%s\n", buf);
+				printf("Mensagem ACK recebida para o CLP do disco de pelotamento:\n%s\n\n", buf);
 				desconto = 0;
 			}
 			else if (ret == WAIT_OBJECT_0 + 1) { //tecla ESC pressionada
